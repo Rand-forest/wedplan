@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wedding To-Do List</title>
+    <style>
+        /* Base Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 800px; margin: auto; }
+        h1 { text-align: center; color: #2c3e50; }
+
+        /* Form Styles */
+        .form-container {
+            display: flex; flex-direction: column; gap: 10px;
+            margin-bottom: 30px; background: #fff; padding: 20px;
+            border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        input, textarea { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; }
+        button {
+            background-color: #3498db; color: white; border: none;
+            padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;
+        }
+        button:hover { background-color: #2980b9; }
+
+        /* Task Grid & Cards */
+        .task-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;
+        }
+        .task-card {
+            background: #fff; padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 4px solid #3498db;
+            display: flex; align-items: center; gap: 15px;
+        }
+        .task-content { flex-grow: 1; }
+        .task-checkbox { cursor: pointer; width: 20px; height: 20px; accent-color: #3498db; flex-shrink: 0; }
+        .task-title { font-size: 1.1em; font-weight: bold; margin-bottom: 5px; }
+        .completed-text { text-decoration: line-through; color: #95a5a6; }
+        
+        .note-indicator {
+            background-color: #f1c40f; color: #333; font-size: 0.8em;
+            padding: 5px 10px; border-radius: 12px; cursor: pointer;
+            display: inline-block; margin-top: 5px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
+            width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); 
+        }
+        .modal-content {
+            background-color: #fefefe; margin: 15% auto; padding: 20px;
+            border-radius: 8px; width: 80%; max-width: 500px;
+        }
+        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-btn:hover { color: black; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Wedding To-Do List</h1>
+        
+        <div class="form-container">
+            <input type="text" id="newTaskName" placeholder="New Task (e.g., Book Florist)">
+            <textarea id="newTaskNotes" placeholder="Notes (optional)"></textarea>
+            <button id="addTaskBtn">Add Task</button>
+        </div>
+
+        <div id="taskList" class="task-grid">
+            <p>To see dynamic data, add your API_URL to the script.</p>
+        </div>
+    </div>
+
+    <div id="noteModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Task Notes</h2>
+            <div id="modalNoteContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Replace with your actual deployment URL later
+        const API_URL = 'YOUR_WEB_APP_URL_HERE'; 
+
+        const taskList = document.getElementById('taskList');
+        const addTaskBtn = document.getElementById('addTaskBtn');
+        const modal = document.getElementById('noteModal');
+        const closeBtn = document.querySelector('.close-btn');
+        const modalNoteContent = document.getElementById('modalNoteContent');
+
+        document.addEventListener('DOMContentLoaded', fetchTasks);
+        addTaskBtn.addEventListener('click', createTask);
+        closeBtn.addEventListener('click', () => modal.style.display = 'none');
+        window.addEventListener('click', (e) => {
+            if (e.target == modal) modal.style.display = 'none';
+        });
+
+        async function fetchTasks() {
+            // If no URL is set, render a dummy task for previewing the UI
+            if (API_URL === 'YOUR_WEB_APP_URL_HERE') {
+                renderTasks([{ id: '123', taskName: 'Book Photographer', notes: 'Call John at 555-0192', status: 'Pending' }]);
+                return;
+            }
+
+            taskList.innerHTML = '<p>Loading tasks...</p>';
+            try {
+                const response = await fetch(API_URL);
+                const result = await response.json();
+                if (result.status === 'success') { renderTasks(result.data); } 
+            } catch (error) { console.error('Error:', error); }
+        }
+
+        function renderTasks(tasks) {
+            taskList.innerHTML = ''; 
+            tasks.forEach(task => {
+                const card = document.createElement('div');
+                card.className = 'task-card';
+                card.id = `task-${task.id}`;
+                
+                const isCompleted = task.status === 'Completed';
+                const textClass = isCompleted ? 'task-title completed-text' : 'task-title';
+                const checkedAttr = isCompleted ? 'checked' : '';
+
+                let noteHtml = '';
+                if (task.notes && task.notes.trim() !== '') {
+                    noteHtml = `<div class="note-indicator" onclick="openNoteModal(\`${task.notes.replace(/`/g, '\\`')}\`)">View Notes</div>`;
+                }
+
+                card.innerHTML = `
+                    <input type="checkbox" class="task-checkbox" ${checkedAttr} onchange="toggleTaskStatus('${task.id}', this)">
+                    <div class="task-content">
+                        <div class="${textClass}" id="title-${task.id}">${task.taskName}</div>
+                        ${noteHtml}
+                    </div>
+                `;
+                taskList.appendChild(card);
+            });
+        }
+
+        async function toggleTaskStatus(taskId, checkboxElement) {
+            const isChecked = checkboxElement.checked;
+            const newStatus = isChecked ? 'Completed' : 'Pending';
+            const titleElement = document.getElementById(`title-${taskId}`);
+
+            if (isChecked) { titleElement.classList.add('completed-text'); } 
+            else { titleElement.classList.remove('completed-text'); }
+
+            if (API_URL === 'YOUR_WEB_APP_URL_HERE') {
+                console.log("Mock update complete. Add API_URL for real backend updates.");
+                return;
+            }
+
+            const payload = { action: 'UPDATE', id: taskId, status: newStatus };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.status !== 'success') throw new Error(result.message);
+            } catch (error) {
+                checkboxElement.checked = !isChecked;
+                if (!isChecked) { titleElement.classList.add('completed-text'); } 
+                else { titleElement.classList.remove('completed-text'); }
+                alert("Network error: Failed to update task status.");
+            }
+        }
+
+        async function createTask() {
+            const taskNameInput = document.getElementById('newTaskName');
+            const taskNotesInput = document.getElementById('newTaskNotes');
+            if (!taskNameInput.value.trim()) { alert("Task name cannot be empty."); return; }
+
+            addTaskBtn.innerText = 'Adding...';
+            addTaskBtn.disabled = true;
+
+            if (API_URL === 'YOUR_WEB_APP_URL_HERE') {
+                alert("This is a preview. To create tasks, attach your Google Apps Script URL.");
+                addTaskBtn.innerText = 'Add Task';
+                addTaskBtn.disabled = false;
+                return;
+            }
+
+            // Real POST logic...
+            const payload = { action: 'CREATE', taskName: taskNameInput.value.trim(), notes: taskNotesInput.value.trim() };
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    taskNameInput.value = ''; taskNotesInput.value = ''; fetchTasks();
+                }
+            } catch (error) { alert("Failed to add task."); } 
+            finally { addTaskBtn.innerText = 'Add Task'; addTaskBtn.disabled = false; }
+        }
+
+        function openNoteModal(notesText) {
+            modalNoteContent.innerHTML = `<p>${notesText.replace(/\n/g, '<br>')}</p>`;
+            modal.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
