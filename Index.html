@@ -5,120 +5,369 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wedding To-Do List</title>
     <style>
-        /* Base Styles */
+        /* Base Styles & Modern Resets */
+        :root {
+            --primary-color: #3498db;
+            --primary-hover: #5dade2;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --input-bg: #2a2a2a;
+            --border-color: #333333;
+            --text-main: #e0e0e0;
+            --text-muted: #888888;
+            --accent-note: #f39c12;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f9f9f9;
-            color: #333;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
             margin: 0;
             padding: 20px;
+            line-height: 1.6;
         }
-        .container { max-width: 800px; margin: auto; }
-        h1 { text-align: center; color: #2c3e50; }
+
+        .container { 
+            max-width: 900px; 
+            margin: 0 auto; 
+        }
+
+        h1 { 
+            text-align: center; 
+            color: var(--text-main); 
+            font-weight: 600;
+            margin-bottom: 30px;
+        }
 
         /* Form Styles */
         .form-container {
-            display: flex; flex-direction: column; gap: 10px;
-            margin-bottom: 30px; background: #fff; padding: 20px;
-            border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px;
+            margin-bottom: 40px; 
+            background: var(--card-bg); 
+            padding: 25px;
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
-        input, textarea { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; }
+
+        input[type="text"], textarea { 
+            padding: 12px; 
+            background-color: var(--input-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color); 
+            border-radius: 6px; 
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
         button {
-            background-color: #3498db; color: white; border: none;
-            padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;
+            background-color: var(--primary-color); 
+            color: white; 
+            border: none;
+            padding: 12px 20px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 600;
+            font-size: 1rem;
+            transition: background-color 0.2s, transform 0.1s;
         }
-        button:hover { background-color: #2980b9; }
+
+        button:hover { 
+            background-color: var(--primary-hover); 
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
 
         /* Task Grid & Cards */
         .task-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 20px;
         }
+
         .task-card {
-            background: #fff; padding: 15px; border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 4px solid #3498db;
-            display: flex; align-items: center; gap: 15px;
+            background: var(--card-bg); 
+            padding: 20px; 
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2); 
+            border-left: 5px solid var(--primary-color);
+            display: flex; 
+            align-items: flex-start; 
+            gap: 15px;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
-        .task-content { flex-grow: 1; }
-        .task-checkbox { cursor: pointer; width: 20px; height: 20px; accent-color: #3498db; flex-shrink: 0; }
-        .task-title { font-size: 1.1em; font-weight: bold; margin-bottom: 5px; }
-        .completed-text { text-decoration: line-through; color: #95a5a6; }
+
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4); 
+        }
+
+        .task-content { 
+            flex-grow: 1; 
+        }
+
+        .task-checkbox { 
+            cursor: pointer; 
+            width: 22px; 
+            height: 22px; 
+            accent-color: var(--primary-color); 
+            flex-shrink: 0; 
+            margin-top: 2px;
+        }
+
+        .task-title { 
+            font-size: 1.1em; 
+            font-weight: 600; 
+            margin-bottom: 8px; 
+            transition: color 0.3s;
+        }
+
+        .completed-text { 
+            text-decoration: line-through; 
+            color: var(--text-muted); 
+        }
         
         .note-indicator {
-            background-color: #f1c40f; color: #333; font-size: 0.8em;
-            padding: 5px 10px; border-radius: 12px; cursor: pointer;
-            display: inline-block; margin-top: 5px;
+            background-color: rgba(243, 156, 18, 0.15); 
+            color: var(--accent-note); 
+            font-size: 0.85em;
+            font-weight: 600;
+            padding: 6px 12px; 
+            border-radius: 20px; 
+            cursor: pointer;
+            display: inline-flex; 
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.2s;
+        }
+
+        .note-indicator:hover {
+            background-color: rgba(243, 156, 18, 0.25);
         }
 
         /* Modal Styles */
         .modal {
-            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
-            width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); 
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0,0,0,0.4); 
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.2s ease-out;
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
         .modal-content {
-            background-color: #fefefe; margin: 15% auto; padding: 20px;
-            border-radius: 8px; width: 80%; max-width: 500px;
+            background-color: var(--card-bg); 
+            margin: 10vh auto; 
+            padding: 30px;
+            border-radius: 12px; 
+            width: 90%; 
+            max-width: 500px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            position: relative;
         }
-        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
-        .close-btn:hover { color: black; }
+
+        .modal-content h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .close-btn { 
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            color: var(--text-muted); 
+            font-size: 28px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover { 
+            color: var(--text-main); 
+        }
+
+        .modal-body {
+            margin-top: 20px;
+            white-space: pre-wrap; /* Preserves line breaks from textarea */
+            color: var(--text-main);
+        }
+
+        .modal-textarea {
+            width: 100%;
+            min-height: 120px;
+            margin-top: 15px;
+            padding: 12px;
+            background-color: var(--input-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        .modal-textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .danger-btn {
+            background-color: #e74c3c;
+        }
+
+        .danger-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .empty-note {
+            background-color: var(--input-bg);
+            color: var(--text-muted);
+        }
+
+        .empty-note:hover {
+            background-color: var(--border-color);
+        }
+
+        .loading-state {
+            text-align: center;
+            color: var(--text-muted);
+            grid-column: 1 / -1;
+            padding: 40px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Wedding To-Do List</h1>
+        <h1>💍 Wedding To-Do List</h1>
         
+        <!-- Add Task Form -->
         <div class="form-container">
-            <input type="text" id="newTaskName" placeholder="New Task (e.g., Book Florist)">
+            <input type="text" id="newTaskName" placeholder="New Task (e.g., Book Photographer, Order Cake)">
             <textarea id="newTaskNotes" placeholder="Notes (optional)"></textarea>
             <button id="addTaskBtn">Add Task</button>
         </div>
 
+        <!-- Task List -->
         <div id="taskList" class="task-grid">
-            <p>To see dynamic data, add your API_URL to the script.</p>
+            <div class="loading-state">Loading tasks...</div>
         </div>
     </div>
 
+    <!-- Notes Modal -->
     <div id="noteModal" class="modal">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
-            <h2>Task Notes</h2>
-            <div id="modalNoteContent"></div>
+            <h2 id="modalTaskTitle">Task Notes</h2>
+            <textarea id="modalNoteInput" class="modal-textarea" placeholder="Enter your notes here..."></textarea>
+            <div class="modal-actions">
+                <button id="saveNoteBtn">Save Note</button>
+                <button id="deleteNoteBtn" class="danger-btn">Delete Note</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // Replace with your actual deployment URL later
+        // --- CONFIGURATION ---
         const API_URL = 'YOUR_WEB_APP_URL_HERE'; 
+        const USE_MOCK_DATA = true; // Set to false when connecting to Apps Script
 
+        // --- MOCK DATABASE (For Preview Purposes) ---
+        let mockTasks = [
+            { id: 'uuid-1', taskName: 'Finalize Guest List', notes: 'Make sure to ask Mom about cousin Sarah.\nNeed addresses for invites.', status: 'Pending' },
+            { id: 'uuid-2', taskName: 'Book Venue', notes: 'Touring the Rose Garden on Saturday at 2PM.', status: 'Completed' },
+            { id: 'uuid-3', taskName: 'Order Invitations', notes: '', status: 'Pending' }
+        ];
+
+        // --- DOM ELEMENTS ---
         const taskList = document.getElementById('taskList');
         const addTaskBtn = document.getElementById('addTaskBtn');
         const modal = document.getElementById('noteModal');
         const closeBtn = document.querySelector('.close-btn');
-        const modalNoteContent = document.getElementById('modalNoteContent');
+        const modalNoteInput = document.getElementById('modalNoteInput');
+        const modalTaskTitle = document.getElementById('modalTaskTitle');
+        const saveNoteBtn = document.getElementById('saveNoteBtn');
+        const deleteNoteBtn = document.getElementById('deleteNoteBtn');
 
+        let currentOpenTaskId = null; // Track which task's note is currently open
+
+        // --- EVENT LISTENERS ---
         document.addEventListener('DOMContentLoaded', fetchTasks);
         addTaskBtn.addEventListener('click', createTask);
         closeBtn.addEventListener('click', () => modal.style.display = 'none');
         window.addEventListener('click', (e) => {
             if (e.target == modal) modal.style.display = 'none';
         });
+        saveNoteBtn.addEventListener('click', () => saveNoteData(currentOpenTaskId, modalNoteInput.value));
+        deleteNoteBtn.addEventListener('click', () => {
+            if(confirm('Are you sure you want to delete this note?')) {
+                saveNoteData(currentOpenTaskId, '');
+            }
+        });
+
+        // --- CORE FUNCTIONS ---
 
         async function fetchTasks() {
-            // If no URL is set, render a dummy task for previewing the UI
-            if (API_URL === 'YOUR_WEB_APP_URL_HERE') {
-                renderTasks([{ id: '123', taskName: 'Book Photographer', notes: 'Call John at 555-0192', status: 'Pending' }]);
+            if (USE_MOCK_DATA) {
+                // Simulate network delay
+                setTimeout(() => renderTasks(mockTasks), 500);
                 return;
             }
 
-            taskList.innerHTML = '<p>Loading tasks...</p>';
             try {
                 const response = await fetch(API_URL);
                 const result = await response.json();
-                if (result.status === 'success') { renderTasks(result.data); } 
-            } catch (error) { console.error('Error:', error); }
+                if (result.status === 'success') { 
+                    renderTasks(result.data); 
+                } else {
+                    taskList.innerHTML = '<div class="loading-state">Failed to load tasks.</div>';
+                }
+            } catch (error) { 
+                console.error('Error:', error); 
+                taskList.innerHTML = '<div class="loading-state">Network error while loading tasks.</div>';
+            }
         }
 
         function renderTasks(tasks) {
             taskList.innerHTML = ''; 
+            
+            if (tasks.length === 0) {
+                taskList.innerHTML = '<div class="loading-state">No tasks yet. Add one above!</div>';
+                return;
+            }
+
             tasks.forEach(task => {
                 const card = document.createElement('div');
                 card.className = 'task-card';
@@ -128,10 +377,14 @@
                 const textClass = isCompleted ? 'task-title completed-text' : 'task-title';
                 const checkedAttr = isCompleted ? 'checked' : '';
 
-                let noteHtml = '';
-                if (task.notes && task.notes.trim() !== '') {
-                    noteHtml = `<div class="note-indicator" onclick="openNoteModal(\`${task.notes.replace(/`/g, '\\`')}\`)">View Notes</div>`;
-                }
+                const hasNotes = task.notes && task.notes.trim() !== '';
+                const noteBtnText = hasNotes ? '📝 View/Edit Notes' : '➕ Add Note';
+                const noteBtnClass = hasNotes ? 'note-indicator' : 'note-indicator empty-note';
+                
+                const escapedNotes = hasNotes ? task.notes.replace(/`/g, '\\`').replace(/"/g, '&quot;') : '';
+                const escapedTitle = task.taskName.replace(/"/g, '&quot;');
+                
+                const noteHtml = `<div class="${noteBtnClass}" onclick="openNoteModal('${task.id}', '${escapedTitle}', \`${escapedNotes}\`)">${noteBtnText}</div>`;
 
                 card.innerHTML = `
                     <input type="checkbox" class="task-checkbox" ${checkedAttr} onchange="toggleTaskStatus('${task.id}', this)">
@@ -149,14 +402,18 @@
             const newStatus = isChecked ? 'Completed' : 'Pending';
             const titleElement = document.getElementById(`title-${taskId}`);
 
+            // 1. Optimistic UI Update: Change UI immediately
             if (isChecked) { titleElement.classList.add('completed-text'); } 
             else { titleElement.classList.remove('completed-text'); }
 
-            if (API_URL === 'YOUR_WEB_APP_URL_HERE') {
-                console.log("Mock update complete. Add API_URL for real backend updates.");
+            if (USE_MOCK_DATA) {
+                // Simulate backend update
+                const task = mockTasks.find(t => t.id === taskId);
+                if (task) task.status = newStatus;
                 return;
             }
 
+            // 2. Network Request
             const payload = { action: 'UPDATE', id: taskId, status: newStatus };
 
             try {
@@ -166,8 +423,13 @@
                     body: JSON.stringify(payload)
                 });
                 const result = await response.json();
-                if (result.status !== 'success') throw new Error(result.message);
+                
+                if (result.status !== 'success') {
+                    throw new Error(result.message);
+                }
             } catch (error) {
+                console.error('Update failed:', error);
+                // 3. Revert UI on failure
                 checkboxElement.checked = !isChecked;
                 if (!isChecked) { titleElement.classList.add('completed-text'); } 
                 else { titleElement.classList.remove('completed-text'); }
@@ -178,20 +440,39 @@
         async function createTask() {
             const taskNameInput = document.getElementById('newTaskName');
             const taskNotesInput = document.getElementById('newTaskNotes');
-            if (!taskNameInput.value.trim()) { alert("Task name cannot be empty."); return; }
+            const nameVal = taskNameInput.value.trim();
+            const notesVal = taskNotesInput.value.trim();
+
+            if (!nameVal) { 
+                alert("Task name cannot be empty."); 
+                taskNameInput.focus();
+                return; 
+            }
 
             addTaskBtn.innerText = 'Adding...';
             addTaskBtn.disabled = true;
 
-            if (API_URL === 'YOUR_WEB_APP_URL_HERE') {
-                alert("This is a preview. To create tasks, attach your Google Apps Script URL.");
-                addTaskBtn.innerText = 'Add Task';
-                addTaskBtn.disabled = false;
+            if (USE_MOCK_DATA) {
+                // Simulate network delay for creation
+                setTimeout(() => {
+                    const newTask = {
+                        id: 'uuid-' + Date.now(),
+                        taskName: nameVal,
+                        notes: notesVal,
+                        status: 'Pending'
+                    };
+                    mockTasks.push(newTask);
+                    taskNameInput.value = ''; 
+                    taskNotesInput.value = ''; 
+                    fetchTasks();
+                    addTaskBtn.innerText = 'Add Task'; 
+                    addTaskBtn.disabled = false;
+                }, 600);
                 return;
             }
 
-            // Real POST logic...
-            const payload = { action: 'CREATE', taskName: taskNameInput.value.trim(), notes: taskNotesInput.value.trim() };
+            // Real POST logic
+            const payload = { action: 'CREATE', taskName: nameVal, notes: notesVal };
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
@@ -199,16 +480,77 @@
                     body: JSON.stringify(payload)
                 });
                 const result = await response.json();
+                
                 if (result.status === 'success') {
-                    taskNameInput.value = ''; taskNotesInput.value = ''; fetchTasks();
+                    taskNameInput.value = ''; 
+                    taskNotesInput.value = ''; 
+                    fetchTasks(); // Refresh list to get the new task with its real Google Sheet ID
+                } else {
+                    throw new Error(result.message);
                 }
-            } catch (error) { alert("Failed to add task."); } 
-            finally { addTaskBtn.innerText = 'Add Task'; addTaskBtn.disabled = false; }
+            } catch (error) { 
+                console.error(error);
+                alert("Failed to add task."); 
+            } finally { 
+                addTaskBtn.innerText = 'Add Task'; 
+                addTaskBtn.disabled = false; 
+            }
         }
 
-        function openNoteModal(notesText) {
-            modalNoteContent.innerHTML = `<p>${notesText.replace(/\n/g, '<br>')}</p>`;
+        function openNoteModal(taskId, title, notesText) {
+            currentOpenTaskId = taskId;
+            modalTaskTitle.innerText = title;
+            modalNoteInput.value = notesText; 
             modal.style.display = 'block';
+        }
+
+        async function saveNoteData(taskId, newNotes) {
+            if (!taskId) return;
+            
+            const originalBtnText = saveNoteBtn.innerText;
+            saveNoteBtn.innerText = 'Saving...';
+            saveNoteBtn.disabled = true;
+            deleteNoteBtn.disabled = true;
+
+            if (USE_MOCK_DATA) {
+                // Simulate backend update
+                setTimeout(() => {
+                    const task = mockTasks.find(t => t.id === taskId);
+                    if (task) task.notes = newNotes;
+                    modal.style.display = 'none';
+                    fetchTasks(); // Refresh to show updated button states
+                    
+                    saveNoteBtn.innerText = originalBtnText;
+                    saveNoteBtn.disabled = false;
+                    deleteNoteBtn.disabled = false;
+                }, 400);
+                return;
+            }
+
+            // Network Request to Google Apps Script
+            const payload = { action: 'UPDATE_NOTE', id: taskId, notes: newNotes.trim() };
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    modal.style.display = 'none';
+                    fetchTasks(); // Refresh UI to update the note indicator
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('Failed to update note:', error);
+                alert("Network error: Failed to save note.");
+            } finally {
+                saveNoteBtn.innerText = originalBtnText;
+                saveNoteBtn.disabled = false;
+                deleteNoteBtn.disabled = false;
+            }
         }
     </script>
 </body>
