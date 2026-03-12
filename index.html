@@ -32,23 +32,42 @@
             margin: 0 auto; 
         }
 
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
         h1 { 
             text-align: center; 
             color: var(--text-main); 
             font-weight: 600;
-            margin-bottom: 30px;
+            margin: 0;
+            line-height: 1;
         }
 
-        /* Form Styles */
-        .form-container {
-            display: flex; 
-            flex-direction: column; 
-            gap: 12px;
-            margin-bottom: 40px; 
-            background: var(--card-bg); 
-            padding: 25px;
-            border-radius: 12px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        .add-btn {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s, transform 0.1s;
+            line-height: 0;
+        }
+
+        .add-btn:hover {
+            background-color: #27ae60;
+            transform: scale(1.05);
         }
 
         input[type="text"], textarea { 
@@ -95,7 +114,7 @@
         /* Task Grid & Cards */
         .task-grid {
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            grid-template-columns: 1fr; /* Changed to single column */
             gap: 20px;
         }
 
@@ -106,7 +125,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.2); 
             border-left: 5px solid var(--primary-color);
             display: flex; 
-            align-items: flex-start; 
+            align-items: center; 
             gap: 15px;
             transition: transform 0.2s, box-shadow 0.2s;
         }
@@ -118,6 +137,10 @@
 
         .task-content { 
             flex-grow: 1; 
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .task-checkbox { 
@@ -126,13 +149,11 @@
             height: 22px; 
             accent-color: var(--primary-color); 
             flex-shrink: 0; 
-            margin-top: 2px;
         }
 
         .task-title { 
             font-size: 1.1em; 
             font-weight: 600; 
-            margin-bottom: 8px; 
             transition: color 0.3s;
         }
 
@@ -173,7 +194,6 @@
             display: flex;
             gap: 8px;
             flex-shrink: 0;
-            margin-top: 2px;
         }
 
         .icon-btn {
@@ -311,13 +331,9 @@
 </head>
 <body>
     <div class="container">
-        <h1>💍 Wedding To-Do List</h1>
-        
-        <!-- Add Task Form -->
-        <div class="form-container">
-            <input type="text" id="newTaskName" placeholder="New Task (e.g., Book Photographer, Order Cake)">
-            <textarea id="newTaskNotes" placeholder="Notes (optional)"></textarea>
-            <button id="addTaskBtn">Add Task</button>
+        <div class="header-container">
+            <h1>💍 Wedding To-Do List</h1>
+            <button id="openAddModalBtn" class="add-btn" title="Add New Task">+</button>
         </div>
 
         <!-- Task List -->
@@ -326,10 +342,32 @@
         </div>
     </div>
 
+    <!-- Add Task Modal -->
+    <div id="addTaskModal" class="modal">
+        <div class="modal-content">
+            <span class="close-add-btn close-btn">&times;</span>
+            <h2>Add New Task</h2>
+            
+            <div class="modal-field">
+                <label for="newTaskName">Task Name</label>
+                <input type="text" id="newTaskName" class="modal-input" placeholder="e.g., Book Photographer">
+            </div>
+
+            <div class="modal-field">
+                <label for="newTaskNotes">Notes (optional)</label>
+                <textarea id="newTaskNotes" class="modal-textarea" placeholder="Enter any details here..."></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button id="addTaskBtn">Add Task</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Edit Task Modal -->
     <div id="noteModal" class="modal">
         <div class="modal-content">
-            <span class="close-btn">&times;</span>
+            <span class="close-edit-btn close-btn">&times;</span>
             <h2>Edit Task</h2>
             
             <div class="modal-field">
@@ -356,9 +394,16 @@
 
         // --- DOM ELEMENTS ---
         const taskList = document.getElementById('taskList');
+        
+        // Add Modal Elements
+        const addTaskModal = document.getElementById('addTaskModal');
+        const openAddModalBtn = document.getElementById('openAddModalBtn');
+        const closeAddBtn = document.querySelector('.close-add-btn');
         const addTaskBtn = document.getElementById('addTaskBtn');
+
+        // Edit Modal Elements
         const modal = document.getElementById('noteModal');
-        const closeBtn = document.querySelector('.close-btn');
+        const closeEditBtn = document.querySelector('.close-edit-btn');
         const modalTaskNameInput = document.getElementById('modalTaskNameInput');
         const modalNoteInput = document.getElementById('modalNoteInput');
         const saveEditBtn = document.getElementById('saveEditBtn');
@@ -369,12 +414,26 @@
 
         // --- EVENT LISTENERS ---
         document.addEventListener('DOMContentLoaded', fetchTasks);
+        
+        // Add Modal Events
+        openAddModalBtn.addEventListener('click', () => {
+            document.getElementById('newTaskName').value = '';
+            document.getElementById('newTaskNotes').value = '';
+            addTaskModal.style.display = 'block';
+            document.getElementById('newTaskName').focus();
+        });
+        closeAddBtn.addEventListener('click', () => addTaskModal.style.display = 'none');
         addTaskBtn.addEventListener('click', createTask);
-        closeBtn.addEventListener('click', () => modal.style.display = 'none');
+        
+        // Edit Modal Events
+        closeEditBtn.addEventListener('click', () => modal.style.display = 'none');
+        saveEditBtn.addEventListener('click', saveTaskData);
+
+        // Global Modal Close
         window.addEventListener('click', (e) => {
             if (e.target == modal) modal.style.display = 'none';
+            if (e.target == addTaskModal) addTaskModal.style.display = 'none';
         });
-        saveEditBtn.addEventListener('click', saveTaskData);
 
         // --- CORE FUNCTIONS ---
 
@@ -545,6 +604,7 @@
                 if (result.status === 'success') {
                     taskNameInput.value = ''; 
                     taskNotesInput.value = ''; 
+                    addTaskModal.style.display = 'none';
                     fetchTasks(); // Refresh list to get the new task with its real Google Sheet ID
                 } else {
                     throw new Error(result.message);
