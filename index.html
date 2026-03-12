@@ -168,6 +168,30 @@
             background-color: var(--border-color);
         }
 
+        /* Task Action Buttons */
+        .task-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            padding: 4px;
+            font-size: 1.1em;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .icon-btn:hover {
+            opacity: 1;
+            transform: scale(1.15);
+            background: none;
+        }
+
         /* Modal Styles */
         .modal {
             display: none; 
@@ -392,6 +416,10 @@
                         <div class="${textClass}" id="title-${task.id}">${task.taskName}</div>
                         ${noteHtml}
                     </div>
+                    <div class="task-actions">
+                        <button class="icon-btn" title="Edit Task Name" onclick="renameTask('${task.id}', '${escapedTitle}')">✏️</button>
+                        <button class="icon-btn" title="Delete Task" onclick="deleteTask('${task.id}')">🗑️</button>
+                    </div>
                 `;
                 taskList.appendChild(card);
             });
@@ -427,6 +455,74 @@
                 if (!isChecked) { titleElement.classList.add('completed-text'); } 
                 else { titleElement.classList.remove('completed-text'); }
                 alert("Network error: Failed to update task status.");
+            }
+        }
+
+        async function renameTask(taskId, currentName) {
+            const newName = prompt("Edit Task Name:", currentName);
+            
+            // If user clicked cancel or entered empty/same string, do nothing
+            if (newName === null || newName.trim() === "" || newName === currentName) {
+                return;
+            }
+
+            const trimmedName = newName.trim();
+            const titleElement = document.getElementById(`title-${taskId}`);
+            
+            // Optimistic UI Update
+            titleElement.innerText = trimmedName;
+
+            const payload = { action: 'UPDATE_TASK_NAME', id: taskId, taskName: trimmedName };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    fetchTasks(); // Refresh cache in the background
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('Rename failed:', error);
+                titleElement.innerText = currentName; // Revert UI on failure
+                alert("Network error: Failed to rename task.");
+            }
+        }
+
+        async function deleteTask(taskId) {
+            if (!confirm('Are you sure you want to permanently delete this task?')) {
+                return;
+            }
+
+            const cardElement = document.getElementById(`task-${taskId}`);
+            
+            // Optimistic UI Update - Hide element instantly
+            cardElement.style.display = 'none';
+
+            const payload = { action: 'DELETE_TASK', id: taskId };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    fetchTasks(); // Refresh list and cache
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('Delete failed:', error);
+                cardElement.style.display = 'flex'; // Revert UI to visible on failure
+                alert("Network error: Failed to delete task.");
             }
         }
 
