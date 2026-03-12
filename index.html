@@ -79,6 +79,7 @@
             font-family: inherit;
             font-size: 1rem;
             transition: border-color 0.2s;
+            box-sizing: border-box;
         }
 
         input[type="text"]:focus, textarea:focus {
@@ -128,11 +129,33 @@
             align-items: center; 
             gap: 15px;
             transition: transform 0.2s, box-shadow 0.2s;
+            cursor: grab;
+        }
+
+        .task-card.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            border: 2px dashed var(--primary-hover);
         }
 
         .task-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.4); 
+        }
+
+        .drag-handle {
+            color: var(--text-muted);
+            font-size: 1.5em;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+
+        .task-card:hover .drag-handle {
+            opacity: 1;
         }
 
         .task-content { 
@@ -435,6 +458,20 @@
             if (e.target == addTaskModal) addTaskModal.style.display = 'none';
         });
 
+        // Drag and Drop Container Events
+        taskList.addEventListener('dragover', e => {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(taskList, e.clientY);
+            const draggable = document.querySelector('.dragging');
+            if (draggable) {
+                if (afterElement == null) {
+                    taskList.appendChild(draggable);
+                } else {
+                    taskList.insertBefore(draggable, afterElement);
+                }
+            }
+        });
+
         // --- CORE FUNCTIONS ---
 
         async function fetchTasks() {
@@ -477,13 +514,8 @@
                 return;
             }
 
-            // Sort tasks: pending at the top, completed at the bottom
-            tasks.sort((a, b) => {
-                if (a.status === 'Completed' && b.status !== 'Completed') return 1;
-                if (a.status !== 'Completed' && b.status === 'Completed') return -1;
-                return 0; // maintain relative order otherwise
-            });
-
+            // Removed strict sort logic here so the backend/manual order is respected entirely.
+            
             tasks.forEach(task => {
                 const card = document.createElement('div');
                 card.className = 'task-card';
@@ -504,6 +536,7 @@
                 const noteHtml = `<div class="${noteBtnClass}" onclick="openEditModal('${task.id}', '${escapedTitle}', \`${escapedNotes}\`)">${noteBtnText}</div>`;
 
                 card.innerHTML = `
+                    <div class="drag-handle" title="Drag to reorder">⣿</div>
                     <input type="checkbox" class="task-checkbox" ${checkedAttr} onchange="toggleTaskStatus('${task.id}', this)">
                     <div class="task-content">
                         <div class="${textClass}" id="title-${task.id}">${task.taskName}</div>
@@ -514,8 +547,72 @@
                         <button class="icon-btn" title="Delete Task" onclick="deleteTask('${task.id}')">🗑️</button>
                     </div>
                 `;
+                
+                // Drag and Drop Event Listeners for each card
+                card.draggable = true;
+                card.addEventListener('dragstart', () => {
+                    card.classList.add('dragging');
+                });
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('dragging');
+                    saveNewOrder(); // Save to backend when drop finishes
+                });
+
                 taskList.appendChild(card);
             });
+        }
+
+        // Helper for drag and drop sorting
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        async function saveNewOrder() {
+            // Get all task IDs in their new visual order
+            const currentIds = [...taskList.querySelectorAll('.task-card')].map(card => card.id.replace('task-', ''));
+            
+            // Optimistically update the Local Cache so the order persists across immediate reloads
+            const cachedData = JSON.parse(localStorage.getItem('weddingTasks') || '[]');
+            if (cachedData.length > 0) {
+                const orderedData = [];
+                currentIds.forEach(id => {
+                    const task = cachedData.find(t => t.id === id);
+                    if (task) orderedData.push(task);
+                });
+                localStorage.setItem('weddingTasks', JSON.stringify(orderedData));
+            }
+
+            // Send to Google Apps Script
+            const payload = { action: 'REORDER', orderedIds: currentIds };
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                
+                if (result.status !== 'success') {
+                    if (result.message === 'Invalid action') {
+                        throw new Error("Backend script is missing the 'REORDER' action.");
+                    }
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('Reorder failed:', error);
+                alert("Order sync failed: " + error.message + "\n\nPlease ensure you added the 'REORDER' logic block to your Google Apps Script (Code.gs) and published it as a NEW VERSION.");
+                fetchTasks(); // Reload from backend to revert visual order
+            }
         }
 
         async function toggleTaskStatus(taskId, checkboxElement) {
@@ -526,6 +623,14 @@
             // 1. Optimistic UI Update: Change UI immediately
             if (isChecked) { titleElement.classList.add('completed-text'); } 
             else { titleElement.classList.remove('completed-text'); }
+
+            // Update Cache Optimistically 
+            const cachedData = JSON.parse(localStorage.getItem('weddingTasks') || '[]');
+            const taskIndex = cachedData.findIndex(t => t.id === taskId);
+            if(taskIndex > -1) {
+                cachedData[taskIndex].status = newStatus;
+                localStorage.setItem('weddingTasks', JSON.stringify(cachedData));
+            }
 
             // 2. Network Request
             const payload = { action: 'UPDATE', id: taskId, status: newStatus };
@@ -541,10 +646,6 @@
                 if (result.status !== 'success') {
                     throw new Error(result.message);
                 }
-                
-                // Fetch fresh tasks to re-render and re-sort the list smoothly after the status changes
-                fetchTasks();
-
             } catch (error) {
                 console.error('Update failed:', error);
                 // 3. Revert UI on failure
