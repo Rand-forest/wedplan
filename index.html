@@ -227,6 +227,7 @@
             color: var(--primary-color);
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 10px;
+            margin-bottom: 20px;
         }
 
         .close-btn { 
@@ -244,10 +245,39 @@
             color: var(--text-main); 
         }
 
+        .modal-field {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .modal-field label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-muted);
+            font-size: 0.9em;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--input-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
         .modal-textarea {
             width: 100%;
             min-height: 120px;
-            margin-top: 15px;
             padding: 12px;
             background-color: var(--input-bg);
             color: var(--text-main);
@@ -269,14 +299,6 @@
             justify-content: flex-end;
             gap: 10px;
             margin-top: 20px;
-        }
-
-        .danger-btn {
-            background-color: #e74c3c;
-        }
-
-        .danger-btn:hover {
-            background-color: #c0392b;
         }
 
         .loading-state {
@@ -304,15 +326,24 @@
         </div>
     </div>
 
-    <!-- Notes Modal -->
+    <!-- Edit Task Modal -->
     <div id="noteModal" class="modal">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
-            <h2 id="modalTaskTitle">Task Notes</h2>
-            <textarea id="modalNoteInput" class="modal-textarea" placeholder="Enter your notes here..."></textarea>
+            <h2>Edit Task</h2>
+            
+            <div class="modal-field">
+                <label for="modalTaskNameInput">Task Name</label>
+                <input type="text" id="modalTaskNameInput" class="modal-input" placeholder="Task Name">
+            </div>
+
+            <div class="modal-field">
+                <label for="modalNoteInput">Notes</label>
+                <textarea id="modalNoteInput" class="modal-textarea" placeholder="Enter your notes here..."></textarea>
+            </div>
+
             <div class="modal-actions">
-                <button id="saveNoteBtn">Save Note</button>
-                <button id="deleteNoteBtn" class="danger-btn">Delete Note</button>
+                <button id="saveEditBtn">Save Changes</button>
             </div>
         </div>
     </div>
@@ -328,12 +359,13 @@
         const addTaskBtn = document.getElementById('addTaskBtn');
         const modal = document.getElementById('noteModal');
         const closeBtn = document.querySelector('.close-btn');
+        const modalTaskNameInput = document.getElementById('modalTaskNameInput');
         const modalNoteInput = document.getElementById('modalNoteInput');
-        const modalTaskTitle = document.getElementById('modalTaskTitle');
-        const saveNoteBtn = document.getElementById('saveNoteBtn');
-        const deleteNoteBtn = document.getElementById('deleteNoteBtn');
+        const saveEditBtn = document.getElementById('saveEditBtn');
 
         let currentOpenTaskId = null; // Track which task's note is currently open
+        let currentOriginalName = ''; // Track original name to check for edits
+        let currentOriginalNotes = ''; // Track original notes to check for edits
 
         // --- EVENT LISTENERS ---
         document.addEventListener('DOMContentLoaded', fetchTasks);
@@ -342,12 +374,7 @@
         window.addEventListener('click', (e) => {
             if (e.target == modal) modal.style.display = 'none';
         });
-        saveNoteBtn.addEventListener('click', () => saveNoteData(currentOpenTaskId, modalNoteInput.value));
-        deleteNoteBtn.addEventListener('click', () => {
-            if(confirm('Are you sure you want to delete this note?')) {
-                saveNoteData(currentOpenTaskId, '');
-            }
-        });
+        saveEditBtn.addEventListener('click', saveTaskData);
 
         // --- CORE FUNCTIONS ---
 
@@ -408,7 +435,7 @@
                 const escapedNotes = hasNotes ? task.notes.replace(/`/g, '\\`').replace(/"/g, '&quot;').replace(/'/g, "\\'") : '';
                 const escapedTitle = task.taskName.replace(/"/g, '&quot;').replace(/'/g, "\\'");
                 
-                const noteHtml = `<div class="${noteBtnClass}" onclick="openNoteModal('${task.id}', '${escapedTitle}', \`${escapedNotes}\`)">${noteBtnText}</div>`;
+                const noteHtml = `<div class="${noteBtnClass}" onclick="openEditModal('${task.id}', '${escapedTitle}', \`${escapedNotes}\`)">${noteBtnText}</div>`;
 
                 card.innerHTML = `
                     <input type="checkbox" class="task-checkbox" ${checkedAttr} onchange="toggleTaskStatus('${task.id}', this)">
@@ -417,7 +444,7 @@
                         ${noteHtml}
                     </div>
                     <div class="task-actions">
-                        <button class="icon-btn" title="Edit Task Name" onclick="renameTask('${task.id}', '${escapedTitle}')">✏️</button>
+                        <button class="icon-btn" title="Edit Task" onclick="openEditModal('${task.id}', '${escapedTitle}', \`${escapedNotes}\`)">✏️</button>
                         <button class="icon-btn" title="Delete Task" onclick="deleteTask('${task.id}')">🗑️</button>
                     </div>
                 `;
@@ -455,42 +482,6 @@
                 if (!isChecked) { titleElement.classList.add('completed-text'); } 
                 else { titleElement.classList.remove('completed-text'); }
                 alert("Network error: Failed to update task status.");
-            }
-        }
-
-        async function renameTask(taskId, currentName) {
-            const newName = prompt("Edit Task Name:", currentName);
-            
-            // If user clicked cancel or entered empty/same string, do nothing
-            if (newName === null || newName.trim() === "" || newName === currentName) {
-                return;
-            }
-
-            const trimmedName = newName.trim();
-            const titleElement = document.getElementById(`title-${taskId}`);
-            
-            // Optimistic UI Update
-            titleElement.innerText = trimmedName;
-
-            const payload = { action: 'UPDATE_TASK_NAME', id: taskId, taskName: trimmedName };
-
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                });
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    fetchTasks(); // Refresh cache in the background
-                } else {
-                    throw new Error(result.message);
-                }
-            } catch (error) {
-                console.error('Rename failed:', error);
-                titleElement.innerText = currentName; // Revert UI on failure
-                alert("Network error: Failed to rename task.");
             }
         }
 
@@ -567,44 +558,75 @@
             }
         }
 
-        function openNoteModal(taskId, title, notesText) {
+        function openEditModal(taskId, title, notesText) {
             currentOpenTaskId = taskId;
-            modalTaskTitle.innerText = title;
+            currentOriginalName = title;
+            currentOriginalNotes = notesText;
+            
+            modalTaskNameInput.value = title;
             modalNoteInput.value = notesText; 
+            
             modal.style.display = 'block';
         }
 
-        async function saveNoteData(taskId, newNotes) {
-            if (!taskId) return;
-            
-            const originalBtnText = saveNoteBtn.innerText;
-            saveNoteBtn.innerText = 'Saving...';
-            saveNoteBtn.disabled = true;
-            deleteNoteBtn.disabled = true;
+        async function saveTaskData() {
+            if (!currentOpenTaskId) return;
 
-            // Network Request to Google Apps Script
-            const payload = { action: 'UPDATE_NOTE', id: taskId, notes: newNotes.trim() };
+            const newName = modalTaskNameInput.value.trim();
+            const newNotes = modalNoteInput.value.trim();
+
+            if (!newName) {
+                alert("Task name cannot be empty.");
+                return;
+            }
+            
+            const originalBtnText = saveEditBtn.innerText;
+            saveEditBtn.innerText = 'Saving...';
+            saveEditBtn.disabled = true;
+
             try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                });
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    modal.style.display = 'none';
-                    fetchTasks(); // Refresh UI to update the note indicator
-                } else {
-                    throw new Error(result.message);
+                let nameUpdated = false;
+                let notesUpdated = false;
+
+                // 1. Update Name if it changed
+                if (newName !== currentOriginalName) {
+                    const namePayload = { action: 'UPDATE_TASK_NAME', id: currentOpenTaskId, taskName: newName };
+                    const nameRes = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(namePayload)
+                    });
+                    const nameResult = await nameRes.json();
+                    if (nameResult.status !== 'success') throw new Error(nameResult.message);
+                    nameUpdated = true;
                 }
+
+                // 2. Update Notes if they changed
+                if (newNotes !== currentOriginalNotes) {
+                    const notesPayload = { action: 'UPDATE_NOTE', id: currentOpenTaskId, notes: newNotes };
+                    const notesRes = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(notesPayload)
+                    });
+                    const notesResult = await notesRes.json();
+                    if (notesResult.status !== 'success') throw new Error(notesResult.message);
+                    notesUpdated = true;
+                }
+
+                // Close modal and refresh UI
+                modal.style.display = 'none';
+                
+                if (nameUpdated || notesUpdated) {
+                    fetchTasks();
+                }
+
             } catch (error) {
-                console.error('Failed to update note:', error);
-                alert("Network error: Failed to save note.");
+                console.error('Failed to update task:', error);
+                alert("Network error: Failed to save changes.");
             } finally {
-                saveNoteBtn.innerText = originalBtnText;
-                saveNoteBtn.disabled = false;
-                deleteNoteBtn.disabled = false;
+                saveEditBtn.innerText = originalBtnText;
+                saveEditBtn.disabled = false;
             }
         }
     </script>
