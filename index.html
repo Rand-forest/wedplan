@@ -295,6 +295,7 @@
 
     <script>
         // --- CONFIGURATION ---
+        // Hardcoded Google Apps Script Web App Link
         const API_URL = 'https://script.google.com/macros/s/AKfycbx1phUs_ytHERUbnfyapEs0kuSMdoEXfbmlgSezRvlySjyea5LllV-GPrHhwCZrfMNycw/exec'; 
         const USE_MOCK_DATA = false; // Set to false to connect to Apps Script
 
@@ -327,17 +328,34 @@
         // --- CORE FUNCTIONS ---
 
         async function fetchTasks() {
+            // 1. Instantly load from local cache if available (Stale-while-revalidate pattern)
+            const cachedData = localStorage.getItem('weddingTasks');
+            if (cachedData) {
+                try {
+                    const tasks = JSON.parse(cachedData);
+                    renderTasks(tasks);
+                } catch (e) {
+                    console.error('Error parsing cache', e);
+                }
+            }
+
+            // 2. Fetch fresh data from the server in the background
             try {
                 const response = await fetch(API_URL);
                 const result = await response.json();
                 if (result.status === 'success') { 
+                    // Update cache with fresh data
+                    localStorage.setItem('weddingTasks', JSON.stringify(result.data));
+                    // Update UI with fresh data
                     renderTasks(result.data); 
-                } else {
+                } else if (!cachedData) {
                     taskList.innerHTML = '<div class="loading-state">Failed to load tasks.</div>';
                 }
             } catch (error) { 
                 console.error('Error:', error); 
-                taskList.innerHTML = '<div class="loading-state">Network error while loading tasks.</div>';
+                if (!cachedData) {
+                    taskList.innerHTML = '<div class="loading-state">Network error while loading tasks.</div>';
+                }
             }
         }
 
